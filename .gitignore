@@ -1,0 +1,56 @@
+# Node modules
+node_modules/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+.env.*
+
+# Coverage directory
+coverage/
+
+# Build output
+build/
+dist/
+
+# Docker
+*.local
+Dockerfile*
+.dockerignore
+
+# Database
+*.db
+*.sqlite
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Test output
+junit.xml
+
+# IDEs and editors
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+*.swp
+*.swo
+
+# Misc
+*.tgz
+
+# Swagger docs
+docs/
+
+# MongoDB data
+mongodb_data/
+
+# Redis data
+redis_data/ 

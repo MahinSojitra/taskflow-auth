@@ -1,0 +1,113 @@
+version: "3.8"
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:6.0
+    container_name: taskflow-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: taskflow_auth
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - ./scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - taskflow-network
+
+  # TaskFlowAuth API
+  taskflow-auth:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: taskflow-auth-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      HOST: http://localhost:3000
+      MONGODB_URI: mongodb://admin:password123@mongodb:27017/taskflow_auth?authSource=admin
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-your-super-secret-access-key-change-in-production}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-your-super-secret-refresh-key-change-in-production}
+      JWT_ID_SECRET: ${JWT_ID_SECRET:-your-super-secret-id-key-change-in-production}
+      JWT_ACCESS_EXPIRES_IN: 900
+      JWT_REFRESH_EXPIRES_IN: 604800
+      JWT_ID_EXPIRES_IN: 3600
+      OAUTH2_AUTHORIZATION_CODE_EXPIRES_IN: 600
+      OAUTH2_ACCESS_TOKEN_EXPIRES_IN: 3600
+      OAUTH2_REFRESH_TOKEN_EXPIRES_IN: 2592000
+      BCRYPT_ROUNDS: 12
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX_REQUESTS: 100
+      SLOW_DOWN_WINDOW_MS: 900000
+      SLOW_DOWN_DELAY_AFTER: 50
+      SLOW_DOWN_MAX_DELAY_MS: 20000
+      LOG_LEVEL: info
+      CORS_ORIGIN: http://localhost:3000,http://localhost:3001
+      CORS_CREDENTIALS: true
+      PKCE_CODE_VERIFIER_LENGTH: 128
+      PKCE_CODE_CHALLENGE_METHOD: S256
+      TOKEN_BLACKLIST_CLEANUP_INTERVAL: 3600000
+      TOKEN_BLACKLIST_EXPIRY_BUFFER: 86400000
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./logs:/app/logs
+    depends_on:
+      - mongodb
+    networks:
+      - taskflow-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # MongoDB Express (Optional - for database management)
+  mongo-express:
+    image: mongo-express:1.0.0
+    container_name: taskflow-mongo-express
+    restart: unless-stopped
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
+      ME_CONFIG_MONGODB_ADMINPASSWORD: password123
+      ME_CONFIG_MONGODB_URL: mongodb://admin:password123@mongodb:27017/
+      ME_CONFIG_BASICAUTH_USERNAME: admin
+      ME_CONFIG_BASICAUTH_PASSWORD: password123
+    ports:
+      - "8081:8081"
+    depends_on:
+      - mongodb
+    networks:
+      - taskflow-network
+    profiles:
+      - dev
+
+  # Redis (Optional - for session storage and caching)
+  redis:
+    image: redis:7-alpine
+    container_name: taskflow-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - taskflow-network
+    profiles:
+      - dev
+
+volumes:
+  mongodb_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  taskflow-network:
+    driver: bridge
