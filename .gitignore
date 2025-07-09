@@ -54,3 +54,6 @@ mongodb_data/
 
 # Redis data
 redis_data/ 
+
+# .env file
+env.example.new
